@@ -4,14 +4,22 @@
 
 
 //================================ Mapeamento de Hardware ============================//
-LiquidCrystal LCD (12, 11, 5, 4, 3, 2); //Esta função declara quais os pinos do Arduino serão utilizados para o controle do LCD 
+LiquidCrystal LCD (12, 11, 5, 4, 3, 2); //Esta função declara quais os pinos do Arduino serão utilizados para o controle do LCD
+ 
+#define sensorTemperatura A0
+#define sensorUmidade A5
+#define LedVermelho 6
+#define LedVerde 9
+#define LedAmarelo 7
+#define Rele_Umidade 10
 
-#define Sensor 0  // Define o pino A0 como “sensor”
+//#define Sensor 0  // Define o pino A0 como “sensor”
 #define PotenciometroAjusteTemp 1  // Define o pino A0 como “sensor”
 #define Rele_Peltier 8
 
+
 //=========================== Declarando Variáveis Globais =========================//
-float Constante = 51.15;// Constante para estabelecer a faixa de temperatura de 0 à 20 Graus / 1023/20 = 51.15.
+float Constante = 39.34;// Constante para estabelecer a faixa de temperatura de 0 à 20 Graus / 1023/20 = 51.15.
 float  Temperatura; // Variável que recebe o valor convertido para temperatura.
 int ValorAjustadoTemp = 0;
 
@@ -19,25 +27,25 @@ int ValorAjustadoTemp = 0;
 byte a[8] = {B00110, B01001, B00110, B00000, B00000, B00000, B00000, B00000,};
 
 //========================= Criando o objeto para o termistor ======================//
-Thermistor temp(Sensor);
+Thermistor temp(sensorTemperatura);
 
-bool leituraSensor;
-bool leituraAnterior;
+bool leituraSensorUmidade;
+bool leituraAnteriorUmidade;
 
 void setup() {
   
-  //Sensor
-  pinMode(8, INPUT);
+  //SensorUmidade
+  pinMode(sensorUmidade, INPUT);
 
   //Atuador
-  pinMode(12, OUTPUT);
+  pinMode(Rele_Umidade, OUTPUT);
   
   //LEDs
-  pinMode(5, OUTPUT);  //vermelho
-  pinMode(6, OUTPUT);  //amarelo
-  pinMode(7, OUTPUT);  //verde
+  pinMode(LedVermelho, OUTPUT); //Precisa mudar  //vermelho
+  pinMode(LedVerde, OUTPUT);  //amarelo
+  pinMode(LedAmarelo, OUTPUT);  //verde
 
-  pinMode( Rele_Peltier, OUTPUT);// Declara o pino do rele como 
+  pinMode(Rele_Peltier, OUTPUT);// Declara o pino do rele como 
 
   LCD.begin(16, 2);                            // Diz para o Arduino que o display é 16x2.
   LCD.setCursor(0, 0);           // Move o cursor do display para a segunda linha.
@@ -46,35 +54,35 @@ void setup() {
 
 void loop() {
 
-  leituraSensor = digitalRead(8);
+  leituraSensorUmidade = digitalRead(A5);
 
-  if (leituraSensor == HIGH) {
+  if (leituraSensorUmidade == HIGH) {
      //No estado seco
-     digitalWrite(5, HIGH);  //vermelho
-     digitalWrite(7, LOW);   //verde
+     digitalWrite(LedVermelho, HIGH);  //vermelho
+     digitalWrite(LedVerde, LOW);   //verde
   } else {
      //No estado úmido
-     digitalWrite(5, LOW);   //vermelho
-     digitalWrite(7, HIGH);  //verde
+     digitalWrite(LedVermelho, LOW);   //vermelho
+     digitalWrite(LedVerde, HIGH);  //verde
   }
 
   //Ao entrar no estado seco  
-  if (leituraSensor && !leituraAnterior) {
+  if (leituraSensorUmidade && !leituraAnteriorUmidade) {
      delay(5000);
-     digitalWrite(5, LOW);   //vermelho
-     digitalWrite(6, HIGH);  //amarelo
+     digitalWrite(LedVermelho, LOW);   //vermelho
+     digitalWrite(LedAmarelo, HIGH);  //amarelo
 
-     while (digitalRead(8)) {
-        digitalWrite(12, HIGH);   //rele / válvula / solenoide / bomba
+     while (digitalRead(leituraSensorUmidade)) {
+        digitalWrite(Rele_Umidade, HIGH);   //rele / válvula / solenoide / bomba
         delay(500);
-        digitalWrite(12, LOW);   //rele / válvula / solenoide / bomba
+        digitalWrite(Rele_Umidade, LOW);   //rele / válvula / solenoide / bomba
 
         delay(10000);          
      }
-     digitalWrite(6, LOW);  //amarelo
+     digitalWrite(LedAmarelo, LOW);  //amarelo
   }
   
-  leituraAnterior = leituraSensor;
+  leituraAnteriorUmidade = leituraSensorUmidade;
 
   ValorAjustadoTemp = analogRead(PotenciometroAjusteTemp) / Constante ;
 
