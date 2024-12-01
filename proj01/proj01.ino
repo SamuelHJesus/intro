@@ -6,22 +6,30 @@
 //================================ Mapeamento de Hardware ============================//
 LiquidCrystal LCD (12, 11, 5, 4, 3, 2); //Esta função declara quais os pinos do Arduino serão utilizados para o controle do LCD
  
+//definição dos sensores
 #define sensorTemperatura A0
 #define sensorUmidade A5
+
+//definição dos leds
 #define LedVermelho 6
 #define LedVerde 9
-#define LedAmarelo 7
+#define LedAmarelo 6
+
+//definição dos relés
 #define Rele_Umidade 10
+#define Rele_Resistor 7
+#define Rele_Peltier 8
 
 //#define Sensor 0  // Define o pino A0 como “sensor”
 #define PotenciometroAjusteTemp 1  // Define o pino A0 como “sensor”
-#define Rele_Peltier 8
+
 
 
 //=========================== Declarando Variáveis Globais =========================//
 float Constante = 39.34;// Constante para estabelecer a faixa de temperatura de 0 à 20 Graus / 1023/20 = 51.15.
 float  Temperatura; // Variável que recebe o valor convertido para temperatura.
 int ValorAjustadoTemp = 0;
+int histerese = 5;
 
 //======================== Array que desenha o simbolo de grau =====================//
 byte a[8] = {B00110, B01001, B00110, B00000, B00000, B00000, B00000, B00000,};
@@ -37,26 +45,31 @@ void setup() {
   //SensorUmidade
   pinMode(sensorUmidade, INPUT);
 
-  //Atuador
+  //Atuadores
   pinMode(Rele_Umidade, OUTPUT);
-  
+  pinMode(Rele_Peltier, OUTPUT);
+  pinMode(Rele_Resistor, OUTPUT);
+
   //LEDs
   pinMode(LedVermelho, OUTPUT); //Precisa mudar  //vermelho
   pinMode(LedVerde, OUTPUT);  //amarelo
   pinMode(LedAmarelo, OUTPUT);  //verde
 
-  pinMode(Rele_Peltier, OUTPUT);// Declara o pino do rele como 
-
-  LCD.begin(16, 2);                            // Diz para o Arduino que o display é 16x2.
+  //LCD
+  LCD.begin(16, 2);              // Diz para o Arduino que o display é 16x2.
   LCD.setCursor(0, 0);           // Move o cursor do display para a segunda linha.
   LCD.print("Temp: RT:  AJT:");
 }
 
 void loop() {
+  //Leituras
+  leituraSensorUmidade = digitalRead(A5); //umidade
+  int umidade = (leituraSensorUmidade) * (100/1023); //conversao para variavel
+  ValorAjustadoTemp = analogRead(PotenciometroAjusteTemp) / Constante ; //ajuste de temperatura
+  int Temperature = temp.getTemp(); //coleta da temperatura
 
-  leituraSensorUmidade = digitalRead(A5);
-
-  if (leituraSensorUmidade == HIGH) {
+  /*
+  if (umidade == HIGH) {
      //No estado seco
      digitalWrite(LedVermelho, HIGH);  //vermelho
      digitalWrite(LedVerde, LOW);   //verde
@@ -65,8 +78,30 @@ void loop() {
      digitalWrite(LedVermelho, LOW);   //vermelho
      digitalWrite(LedVerde, HIGH);  //verde
   }
+  */
 
-  //Ao entrar no estado seco  
+
+  if(umidade < 20){
+    digitalWrite(LedVermelho, HIGH);
+    digitalWrite(LedVerde, LOW);
+    digitalWrite(LedAmarelo, LOW);
+
+    digitalWrite(Rele_Umidade, HIGH);
+    delay(1000);
+    digitalWrite(Rele_Umidade, LOW);
+  } else if(umidade > 20 && umidade <= 50) {
+    digitalWrite(LedVermelho, LOW);
+    digitalWrite(LedVerde, LOW);
+    digitalWrite(LedAmarelo, HIGH);
+    delay(1000);
+  } else if(umidade > 50) {
+    digitalWrite(LedVermelho, LOW);
+    digitalWrite(LedVerde, HIGH);
+    digitalWrite(LedAmarelo, LOW);
+  }
+
+  //Ao entrar no estado seco 
+  /* 
   if (leituraSensorUmidade && !leituraAnteriorUmidade) {
      delay(5000);
      digitalWrite(LedVermelho, LOW);   //vermelho
@@ -81,20 +116,23 @@ void loop() {
      }
      digitalWrite(LedAmarelo, LOW);  //amarelo
   }
+  */
   
-  leituraAnteriorUmidade = leituraSensorUmidade;
+  //leituraAnteriorUmidade = leituraSensorUmidade;
 
-  ValorAjustadoTemp = analogRead(PotenciometroAjusteTemp) / Constante ;
+  
 
-  int Temperature = temp.getTemp();
-
-  if (Temperature >= ValorAjustadoTemp ) {
+  if (Temperature >= ValorAjustadoTemp - histerese ) {
     digitalWrite(Rele_Peltier, HIGH);
+    digitalWrite(Rele_Resistor, LOW);
   }
-  if (Temperature <= (ValorAjustadoTemp - 1) ) {
+  if (Temperature <= (ValorAjustadoTemp - histerese) ) {
     digitalWrite(Rele_Peltier, LOW);
+    digitalWrite(Rele_Resistor, HIGH);
   }
 
+
+  //Codigo do LCD
   LCD.setCursor(5, 1);  // Move o cursor do display para a segunda linha.
   LCD.print(Temperature); // Exibe o valor de temperatura no display.
   LCD.setCursor(8, 1); // Move o cursor do display para a segunda linha.
